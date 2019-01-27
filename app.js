@@ -4,14 +4,14 @@ const path = require('path');
 const multer = require('multer');
 const bodyParser = require('body-parser');
 
+const authRoutes = require('./routes/auth');
+const feedRoutes = require('./routes/feed');
+
 const app = express();
 
-const authRoutes = require('./routes/auth');
-const feddRoutes = require('./routes/feed');
-
-const diskStorage = multer.diskStorage({
+const fileStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, 'image');
+    cb(null, 'images');
   },
   filename: (req, file, cb) => {
     cb(null, new Date().getSeconds().toString() + '-' + file.originalname);
@@ -24,16 +24,19 @@ const fileFilter = (req, file, cb) => {
     file.mimetype === 'image/jpg' ||
     file.mimetype === 'image/jpeg'
   ) {
+    cb(null, true);
+  } else {
+    cb(null, false);
   }
 };
 
 app.use(bodyParser.json());
 
 app.use(
-  multer({ storage: diskStorage, fileFilter: fileFilter }).single('image')
+  multer({ storage: fileStorage, fileFilter: fileFilter }).single('image')
 );
 
-app.use('/image', express.static(path.join(__dirname, 'images')));
+app.use('/images', express.static(path.join(__dirname, 'images')));
 
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -45,8 +48,8 @@ app.use((req, res, next) => {
   next();
 });
 
+app.use('/feed', feedRoutes);
 app.use('/auth', authRoutes);
-app.use('/feed', feddRoutes);
 
 app.use((error, req, res, next) => {
   console.log(error);

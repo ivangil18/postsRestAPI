@@ -4,6 +4,7 @@ const path = require('path');
 const { validationResult } = require('express-validator/check');
 
 const Post = require('../models/post');
+const User = require('../models/user');
 
 exports.getPosts = (req, res, next) => {
   const currentPage = req.query.page || 1;
@@ -58,6 +59,8 @@ exports.getPost = (req, res, next) => {
 };
 
 exports.createPost = (req, res, next) => {
+  console.log('entra aqui');
+  
   const errors = validationResult(req);
 
   if (!errors.isEmpty()) {
@@ -74,9 +77,13 @@ exports.createPost = (req, res, next) => {
 
   const title = req.body.title;
   const content = req.body.content;
+  // const imageUrl = 'images/boat.jpg'
+  // const creator = '5c4d39613bf7d70c3484a507';
   const imageUrl = req.file.path.replace('\\', '/');
-  const creator = { name: 'Pepe' };
+  const creator = req.userId;
   const createdAt = new Date();
+  let postCreator;
+  let postCreated;
 
   const post = new Post({
     title,
@@ -89,12 +96,23 @@ exports.createPost = (req, res, next) => {
   post
     .save()
     .then(result => {
-      console.log(req.file);
-
       console.log(result);
+      
+      postCreated = result;
+      return User.findById(req.userId);
+    })
+    .then(user => {
+      console.log(user);
+      
+      postCreator = user;
+      user.posts.push(post);
+      return user.save();
+    })
+    .then(result => {
       res.status(201).json({
         message: 'Success, A post was created!',
-        post: result
+        post: postCreated,
+        creator: { _id: postCreator._id, name: postCreator.name }
       });
     })
     .catch(err => {
