@@ -49,7 +49,7 @@ exports.login = (req, res, next) => {
         error.statusCode = 401;
         throw error;
       }
-      loaddedUser = userDoc;
+      loadedUser = userDoc;
       return bcrypt.compare(password, userDoc.password);
     })
     .then(isEqual => {
