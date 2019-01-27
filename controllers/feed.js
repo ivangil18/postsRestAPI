@@ -59,8 +59,6 @@ exports.getPost = (req, res, next) => {
 };
 
 exports.createPost = (req, res, next) => {
-  console.log('entra aqui');
-  
   const errors = validationResult(req);
 
   if (!errors.isEmpty()) {
@@ -77,8 +75,6 @@ exports.createPost = (req, res, next) => {
 
   const title = req.body.title;
   const content = req.body.content;
-  // const imageUrl = 'images/boat.jpg'
-  // const creator = '5c4d39613bf7d70c3484a507';
   const imageUrl = req.file.path.replace('\\', '/');
   const creator = req.userId;
   const createdAt = new Date();
@@ -97,13 +93,13 @@ exports.createPost = (req, res, next) => {
     .save()
     .then(result => {
       console.log(result);
-      
+
       postCreated = result;
       return User.findById(req.userId);
     })
     .then(user => {
       console.log(user);
-      
+
       postCreator = user;
       user.posts.push(post);
       return user.save();
@@ -158,6 +154,12 @@ exports.updatePost = (req, res, next) => {
         throw error;
       }
 
+      if (post.creator.toString() !== req.userId) {
+        const error = new Error('User Not Authorized to Update Post');
+        error.statusCode = 401;
+        throw error;
+      }
+
       if (updatedImageUrl !== post.imageUrl) {
         deleteFile(post.imageUrl);
       }
@@ -189,6 +191,11 @@ exports.deletePost = (req, res, next) => {
       if (!post) {
         const error = new Error('Post not found');
         error.statusCode = 404;
+        throw error;
+      }
+      if (post.creator.toString() !== req.userId) {
+        const error = new Error('User Not Authorized to Delete Post');
+        error.statusCode = 401;
         throw error;
       }
       deleteFile(post.imageUrl);
