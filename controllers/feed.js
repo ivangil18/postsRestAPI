@@ -14,6 +14,7 @@ exports.getPosts = async (req, res, next) => {
     const totalItems = await Post.find().countDocuments();
 
     const posts = await Post.find()
+      .populate('creator')
       .skip((currentPage - 1) * perPage)
       .limit(perPage);
 
@@ -186,9 +187,9 @@ exports.deletePost = async (req, res, next) => {
     }
 
     deleteFile(post.imageUrl);
-    
+
     const deleteResult = await Post.findByIdAndRemove(postId);
-    
+
     const user = await User.findById(req.userId);
     user.posts.pull(postId);
 
