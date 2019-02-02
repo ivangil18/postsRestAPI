@@ -67,7 +67,7 @@ mongoose
   .then(result => {
     console.log('Conected!');
     const server = app.listen(8080);
-    const io = require('socket.io')(server);
+    const io = require('./socket').init(server);
     io.on('connection', socket => {
       console.log('Client conected!');
     });
