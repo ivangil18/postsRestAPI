@@ -3,6 +3,8 @@ const path = require('path');
 
 const { validationResult } = require('express-validator/check');
 
+const io = require('../socket');
+
 const Post = require('../models/post');
 const User = require('../models/user');
 
@@ -15,6 +17,7 @@ exports.getPosts = async (req, res, next) => {
 
     const posts = await Post.find()
       .populate('creator')
+      .sort({ createdAt: -1 })
       .skip((currentPage - 1) * perPage)
       .limit(perPage);
 
@@ -92,6 +95,12 @@ exports.createPost = async (req, res, next) => {
 
     const saveResult = await user.save();
 
+    const socket = io.getIo();
+    socket.emit('posts', {
+      action: 'create',
+      post: { ...post._doc, creator: { _id: user._id, name: user.name } }
+    });
+
     res.status(201).json({
       message: 'Success, A post was created!',
       post: post,
@@ -132,7 +141,7 @@ exports.updatePost = async (req, res, next) => {
     throw error;
   }
   try {
-    const post = await Post.findById(postId);
+    const post = await Post.findById(postId).populate('creator');
 
     if (!post) {
       const error = new Error('Error, Post no found!');
@@ -140,7 +149,7 @@ exports.updatePost = async (req, res, next) => {
       throw error;
     }
 
-    if (post.creator.toString() !== req.userId) {
+    if (post.creator._id.toString() !== req.userId) {
       const error = new Error('User Not Authorized to Update Post');
       error.statusCode = 401;
       throw error;
@@ -155,6 +164,9 @@ exports.updatePost = async (req, res, next) => {
     post.imageUrl = updatedImageUrl;
 
     const saveResult = await post.save();
+
+    const socket = io.getIo();
+    socket.emit('posts', { action: 'update', post: saveResult });
 
     res.status(200).json({
       message: 'Success, Post Updated',
@@ -194,6 +206,10 @@ exports.deletePost = async (req, res, next) => {
     user.posts.pull(postId);
 
     const saveResult = await user.save();
+
+    //const socket = io.getIo();
+    io.getIo().emit('posts', { action: 'delete', post: postId });
+
     res.status(200).json({
       message: 'Success, post eliminated!'
     });
